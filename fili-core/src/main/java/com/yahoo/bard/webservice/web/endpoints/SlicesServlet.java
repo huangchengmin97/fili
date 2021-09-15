@@ -5,9 +5,14 @@ package com.yahoo.bard.webservice.web.endpoints;
 import static com.yahoo.bard.webservice.config.BardFeatureFlag.UPDATED_METADATA_COLLECTION_NAMES;
 
 import com.yahoo.bard.webservice.application.ObjectMappersSuite;
+import com.yahoo.bard.webservice.druid.client.DruidWebService;
+import com.yahoo.bard.webservice.druid.client.FailureCallback;
+import com.yahoo.bard.webservice.druid.client.HttpErrorCallback;
+import com.yahoo.bard.webservice.druid.client.SuccessCallback;
 import com.yahoo.bard.webservice.exception.MetadataExceptionHandler;
 import com.yahoo.bard.webservice.logging.RequestLog;
 import com.yahoo.bard.webservice.logging.blocks.SliceRequest;
+import com.yahoo.bard.webservice.metadata.DataSourceMetadataLoadTask;
 import com.yahoo.bard.webservice.metadata.DataSourceMetadataService;
 import com.yahoo.bard.webservice.table.PhysicalTableDictionary;
 import com.yahoo.bard.webservice.web.RequestMapper;
@@ -21,6 +26,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -49,9 +58,14 @@ public class SlicesServlet extends EndpointServlet {
 
     private final DataSourceMetadataService dataSourceMetadataService;
     private final PhysicalTableDictionary physicalTableDictionary;
-    private final RequestMapper requestMapper;
+    private final RequestMapper<SlicesApiRequest> requestMapper;
     private final ResponseFormatResolver formatResolver;
     private final MetadataExceptionHandler exceptionHandler;
+
+    private final DruidWebService metadataWebService;
+
+    public static final String METADATA_DRUID_WEB_SERVICE = "metadataDruidWebService";
+
 
     /**
      * Constructor.
@@ -59,6 +73,7 @@ public class SlicesServlet extends EndpointServlet {
      * @param physicalTableDictionary  Physical Tables that this endpoint is reporting on
      * @param requestMapper  Mapper for changing the API request
      * @param dataSourceMetadataService  The data source metadata provider
+     * @param metadataWebService The webservice for querying druid metadata
      * @param objectMappers  JSON tools
      * @param formatResolver  The formatResolver for determining correct response format
      * @param exceptionHandler  Injection point for handling response exceptions
@@ -68,14 +83,16 @@ public class SlicesServlet extends EndpointServlet {
             PhysicalTableDictionary physicalTableDictionary,
             @Named(SlicesApiRequest.REQUEST_MAPPER_NAMESPACE) RequestMapper requestMapper,
             DataSourceMetadataService dataSourceMetadataService,
+            @Named(METADATA_DRUID_WEB_SERVICE) DruidWebService metadataWebService,
             ObjectMappersSuite objectMappers,
             ResponseFormatResolver formatResolver,
             @Named(SlicesApiRequest.EXCEPTION_HANDLER_NAMESPACE) MetadataExceptionHandler exceptionHandler
     ) {
         super(objectMappers);
         this.physicalTableDictionary = physicalTableDictionary;
-        this.requestMapper = requestMapper;
+        this.requestMapper = (RequestMapper<SlicesApiRequest>) requestMapper;
         this.dataSourceMetadataService = dataSourceMetadataService;
+        this.metadataWebService = metadataWebService;
         this.formatResolver = formatResolver;
         this.exceptionHandler = exceptionHandler;
     }
@@ -217,6 +234,55 @@ public class SlicesServlet extends EndpointServlet {
             RequestLog.stopTiming(this);
         }
     }
+
+
+    /**
+     * Endpoint to get the raw druid metadata data.
+     *
+     * @param sliceName  Physical table name
+     * @param containerRequestContext  The context of data provided by the Jersey container for this request
+     *
+     * @return A response with the metadata from the webservice in it.
+     */
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/{sliceName}/raw")
+    public Response getRawMetadataForSliceBySliceName(
+            @PathParam("sliceName") String sliceName,
+            @Context final ContainerRequestContext containerRequestContext
+    ) throws InterruptedException, ExecutionException, TimeoutException {
+        String resourcePath = String.format(DataSourceMetadataLoadTask.DATASOURCE_METADATA_QUERY_FORMAT, sliceName);
+
+        LOG.trace("Attemping to get raw data from Slice Endpoint Response: {}", sliceName);
+
+        SuccessCallback successCallback = rootNode -> LOG.error(
+                "Success retrieving segment metadata for {}",
+                sliceName
+        );
+
+        HttpErrorCallback errorCallback = (code, reason, body) -> LOG.error(
+                "Success retrieving segment metadata for {}, {}, {}, {}",
+                sliceName,
+                code,
+                reason,
+                body
+        );
+        FailureCallback failureCallback = f -> LOG.debug(
+                "Error processing slice raw request: {}, {}",
+                sliceName,
+                f.getMessage()
+        );
+
+        Future<org.asynchttpclient.Response> rawSegments = metadataWebService.getJsonObject(
+                successCallback,
+                errorCallback,
+                failureCallback,
+                resourcePath
+        );
+        String body = rawSegments.get(60, TimeUnit.SECONDS).getResponseBody();
+        return Response.status(Response.Status.FOUND).entity(body).build();
+    }
+
 
     /**
      * Get the URL of the slice.

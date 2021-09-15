@@ -77,4 +77,31 @@ class SlicesServletSpec extends Specification {
         then: "what we expect"
         GroovyTestUtils.compareJson(result, expectedResponse, JsonSortStrategy.SORT_BOTH)
     }
+
+
+    def "test raw slice data endpoint"() {
+        setup:
+        String expectedResponse = """{
+            "name":"all_pets",
+            "timeGrain":"day",
+            "timeZone":"UTC",
+            "dimensions":
+            [
+                {"name":"breed","factName":"breed", "uri":"http://localhost:${jerseyTestBinder.getHarness().getPort()}/dimensions/breed", "intervals":["$interval"]},
+                {"name":"species","factName":"class", "uri":"http://localhost:${jerseyTestBinder.getHarness().getPort()}/dimensions/species", "intervals":["$interval"]},
+                {"name":"sex","factName":"sex", "uri":"http://localhost:${jerseyTestBinder.getHarness().getPort()}/dimensions/sex", "intervals":["$interval"]}
+            ],
+            "segmentInfo": {},
+            "metrics":
+            [
+                {"name":"limbs", "intervals":["$interval"]}
+            ]
+        }"""
+
+        when: "We send a request"
+        String result = jerseyTestBinder.makeRequest("/slices/all_pets").get(String.class)
+
+        then: "what we expect"
+        GroovyTestUtils.compareJson(result, expectedResponse, JsonSortStrategy.SORT_BOTH)
+    }
 }
