@@ -12,7 +12,7 @@ import spock.lang.Specification
 import spock.lang.Timeout
 
 @Timeout(30)    // Fail test if hangs
-class SlicesServletSpec extends Specification {
+class SlicesDebugServletSpec extends Specification {
     JerseyTestBinder jerseyTestBinder
     Interval interval = new Interval("2010-01-01/2500-12-31")
 
@@ -28,31 +28,7 @@ class SlicesServletSpec extends Specification {
         jerseyTestBinder.tearDown()
     }
 
-    def "Slices endpoint returns correct rows to a GET query"() {
-        setup:
-        String expectedResponse = """{
-            "rows":
-            [
-                {"timeGrain":"hour", "name":"color_shapes_hourly", "uri":"http://localhost:${jerseyTestBinder.getHarness().getPort()}/slices/color_shapes_hourly"},
-                {"timeGrain":"day", "name":"color_shapes", "uri":"http://localhost:${jerseyTestBinder.getHarness().getPort()}/slices/color_shapes"},
-                {"timeGrain":"month", "name":"color_shapes_monthly", "uri":"http://localhost:${jerseyTestBinder.getHarness().getPort()}/slices/color_shapes_monthly"},
-                {"timeGrain":"day", "name":"color_size_shapes", "uri":"http://localhost:${jerseyTestBinder.getHarness().getPort()}/slices/color_size_shapes"},
-                {"timeGrain":"day", "name":"color_size_shape_shapes", "uri":"http://localhost:${jerseyTestBinder.getHarness().getPort()}/slices/color_size_shape_shapes"},
-                {"timeGrain":"day", "name":"all_pets", "uri":"http://localhost:${jerseyTestBinder.getHarness().getPort()}/slices/all_pets"},
-                {"timeGrain":"day", "name":"all_shapes", "uri":"http://localhost:${jerseyTestBinder.getHarness().getPort()}/slices/all_shapes"},
-                {"timeGrain":"month", "name":"monthly", "uri":"http://localhost:${jerseyTestBinder.getHarness().getPort()}/slices/monthly"},
-                {"timeGrain":"hour", "name":"hourly", "uri":"http://localhost:${jerseyTestBinder.getHarness().getPort()}/slices/hourly"}
-            ]
-        }"""
-
-        when: "We send a request"
-        String result = jerseyTestBinder.makeRequest("/slices").get(String.class)
-
-        then: "what we expect"
-        GroovyTestUtils.compareJson(result, expectedResponse, JsonSortStrategy.SORT_BOTH)
-    }
-
-    def "test slice endpoint"() {
+    def "test raw slice data endpoint"() {
         setup:
         String expectedResponse = """{
             "name":"all_pets",

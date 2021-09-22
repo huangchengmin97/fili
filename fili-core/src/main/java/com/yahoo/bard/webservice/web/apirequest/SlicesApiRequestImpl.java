@@ -181,6 +181,7 @@ public class SlicesApiRequestImpl extends ApiRequestImpl implements SlicesApiReq
     ) throws BadApiRequestException {
         PhysicalTable table = tableDictionary.get(sliceName);
 
+        LOG.debug("");
         if (table == null) {
             String msg = SLICE_UNDEFINED.logFormat(sliceName);
             LOG.error(msg);
