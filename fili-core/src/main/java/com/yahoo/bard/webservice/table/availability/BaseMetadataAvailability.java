@@ -58,7 +58,12 @@ public abstract class BaseMetadataAvailability implements Availability {
 
     @Override
     public Map<String, SimplifiedIntervalList> getAllAvailableIntervals() {
-        return getDataSourceMetadataService().getAvailableIntervalsByDataSource(getDataSourceName());
+        DataSourceMetadataService metadata = getDataSourceMetadataService();
+        return metadata.hasAvailableDatasource(getDataSourceName()) ?
+                getDataSourceMetadataService().getAvailableIntervalsByDataSource(getDataSourceName())
+                : Collections.emptyMap();
+
+//        return getDataSourceMetadataService().getAvailableIntervalsByDataSource(getDataSourceName());
     }
 
     @Override

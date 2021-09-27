@@ -68,7 +68,7 @@ public class SlicesDebugServlet extends EndpointServlet {
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @Path("/{sliceName}/fetch")
+    @Path("/{sliceName}/ç")
     public Response getRawMetadataForSliceBySliceName(
             @PathParam("sliceName") String sliceName,
             @Context final ContainerRequestContext containerRequestContext
