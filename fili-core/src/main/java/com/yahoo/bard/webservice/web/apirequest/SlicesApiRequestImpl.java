@@ -199,13 +199,6 @@ public class SlicesApiRequestImpl extends ApiRequestImpl implements SlicesApiReq
                     .stream()
                     .limit(2)
                     .collect(Collectors.toList());
-            LOG.debug(
-                    "MLM 1234 Table {}, availability: {}: {}, firstTwo {}",
-                    table.getName(),
-                    table.getAvailability().getClass().toString(),
-                    table.getAvailability(),
-                    firstTwo
-            );
             if (table.getAvailability() instanceof BaseMetadataAvailability) {
                 Set<SortedMap<DateTime, Map<String, SegmentInfo>>> segmentMapSet =
                         ((BaseMetadataAvailability) table.getAvailability())

@@ -419,6 +419,8 @@ class DefaultPhysicalTableResolverSpec  extends Specification {
     @Unroll
     def "select table with least missing data from group #table1.name #table2.name #grain #interval"() {
         setup:
+        // t4h1 - has availability for three weeks starting 6/23 to 7/14 (three weeks, two in month 7)
+        // t4h2 - has availability for two weeks from 7/7 to 7/21 (two weeks, two in month 7)
         BardFeatureFlag.PARTIAL_DATA.setOn(true)
         TemplateDruidQuery query = buildQuery(queryPrototype);
 
